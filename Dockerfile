@@ -7,7 +7,7 @@ COPY ./requeriments.txt /requeriments.txt
 RUN pip install -r /requeriments.txt
 
 RUN mkdir /src
-WORKDIR /scr
+WORKDIR /src
 COPY ./src /src
 
 RUN adduser -D user
