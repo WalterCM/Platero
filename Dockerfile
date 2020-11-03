@@ -4,11 +4,12 @@ MAINTAINER Walter Capa
 ENV PYTHONUNBUFFERED 1
 
 COPY ./requeriments.txt /requeriments.txt
+RUN apk add --update --no-cache jpeg-dev zlib-dev
 RUN apk add --update --no-cache postgresql-client
-RUN apk add --update --no-cache --virtual .tmp-build-deps \
-      gcc libc-dev linux-headers postgresql-dev
+RUN apk add --update --no-cache --virtual .build-deps \
+        build-base linux-headers gcc libc-dev postgresql-dev
 RUN pip install -r /requeriments.txt
-RUN apk del .tmp-build-deps
+RUN apk del .build-deps
 
 RUN mkdir /src
 WORKDIR /src
