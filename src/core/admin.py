@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext as _
@@ -21,4 +22,26 @@ class UserAdmin(BaseUserAdmin):
     )
 
 
+class TermTagInline(admin.TabularInline):
+    model = models.TermTag
+    extra = 0
+
+
+class SpendingInline(admin.TabularInline):
+    model = models.Spending
+    ordering = ('-id',)
+    extra = 0
+
+
+class TermAdmin(admin.ModelAdmin):
+    ordering = ['start_date', 'id']
+    list_display = ['start_date', 'end_date']
+    inlines = (TermTagInline, SpendingInline,)
+    fieldsets = (
+        (None, {'fields': ('start_date', 'end_date')}),
+    )
+
+
 admin.site.register(models.User, UserAdmin)
+admin.site.register(models.Term, TermAdmin)
+admin.site.register(models.Tag)

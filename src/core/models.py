@@ -1,9 +1,8 @@
-from decimal import Decimal
-
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.auth.models import BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
+from django.utils.timezone import now
 
 
 # User
@@ -41,6 +40,38 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'email'
 
 
+# Tag
+class TagManager(models.Manager):
+    """Manager of the tag model"""
+    def create_tag(self, name):
+        if not name:
+            raise ValueError('Tags must have a name')
+        tag = self.model(name=name)
+        tag.save()
+
+        return tag
+
+    def get_or_create_tag(self, name):
+        if not name:
+            raise ValueError('Tags must have a name')
+        try:
+            tag = Tag.objects.get(name=name)
+        except Tag.DoesNotExist:
+            tag = self.create_tag(name)
+        tag.save()
+        return tag
+
+
+class Tag(models.Model):
+    """Tag model"""
+    name = models.CharField(max_length=255)
+
+    objects = TagManager()
+
+    def __str__(self):
+        return self.name
+
+
 # Term
 class TermManager(models.Manager):
     """Manager of the term model"""
@@ -63,16 +94,34 @@ class Term(models.Model):
 
     objects = TermManager()
 
-    def add_spending(self, name, total_to_pay, total_payed=0.0, tags=None):
+    def __str__(self):
+        return '{start_date} - {end_date}'.format(
+            start_date=self.start_date,
+            end_date=self.end_date
+        )
+
+    def add_tag(self, name, planned_spending):
+        tag = Tag.objects.get_or_create_tag(name)
+        tag.save()
+
+        term_tag = TermTag(
+            term=self,
+            tag=tag,
+            planned_spending=planned_spending
+        )
+        term_tag.save()
+
+        return term_tag
+
+    def add_spending(self, name, amount, tags=None):
         if not name:
             raise ValueError('Spendings must have a name')
-        if not total_to_pay:
-            raise ValueError('Spending must have a total to pay')
+        if not amount:
+            raise ValueError('Spending must have an amount')
         spending = Spending(
             name=name,
             term=self,
-            total_to_pay=total_to_pay,
-            total_payed=total_payed
+            amount=amount
         )
         spending.save()
 
@@ -82,81 +131,83 @@ class Term(models.Model):
 
         return spending
 
+    def get_total_to_pay_by_tag(self, name):
+        """Returns the planned spending of the tag"""
+        try:
+            tag = self.tags.get(tag__name=name)
+        except Tag.DoesNotExist:
+            raise ValueError(
+                'A tag with that name doesn\'t exist in this term'
+            )
+
+        return tag.planned_spending
+
+    def get_total_payed_by_tag(self, name):
+        """Returns the total payed in spendings by tag"""
+        return self.spendings.filter(tags__name=name).aggregate(
+            total=models.Sum('amount')
+        ).get('total')
+
+    def get_left_to_pay_by_tag(self, name):
+        """Returns the left to pay amount by tag"""
+        total_to_pay = self.get_total_to_pay_by_tag(name)
+        total_payed = self.get_total_payed_by_tag(name)
+        return total_to_pay - total_payed
+
     @property
     def total_to_pay(self):
-        return self.spendings.aggregate(
-            total=models.Sum('total_to_pay')
+        return self.tags.aggregate(
+            total=models.Sum('planned_spending')
         ).get('total')
 
     @property
     def total_payed(self):
         return self.spendings.aggregate(
-            total=models.Sum('total_payed')
+            total=models.Sum('amount')
         ).get('total')
 
     @property
     def left_to_pay(self):
-        return self.spendings.annotate(
-            left_to_pay=models.F('total_to_pay') - models.F('total_payed')
-        ).aggregate(
-            total=models.Sum('left_to_pay')
-        ).get('total')
+        return self.total_to_pay - self.total_payed
 
 
-# Tag
-class TagManager(models.Manager):
-    """Manager of the tag model"""
-    def create_tag(self, name):
-        if not name:
-            raise ValueError('Tags must have a name')
-        tag = self.model(name=name)
-        tag.save()
-
-        return tag
-
-    def get_or_create_tag(self, name):
-        if not name:
-            raise ValueError('Tags must have a name')
-        try:
-            tag = Tag.objects.get(name=name)
-        except Tag.DoesNotExist:
-            tag = self.create_tag(name)
-
-        return tag
-
-
-class Tag(models.Model):
-    """Tag model"""
-    name = models.CharField(max_length=255)
-
-    objects = TagManager()
+class TermTag(models.Model):
+    term = models.ForeignKey(
+        'Term',
+        related_name='tags',
+        on_delete=models.CASCADE
+    )
+    tag = models.ForeignKey(
+        'Tag',
+        related_name='terms',
+        on_delete=models.CASCADE
+    )
+    planned_spending = models.DecimalField(
+        max_digits=6,
+        decimal_places=2
+    )
 
 
 # Spending
 class Spending(models.Model):
     """Spending model"""
     name = models.CharField(max_length=255)
-    tags = models.ManyToManyField('Tag', related_name='Spendings')
+    tags = models.ManyToManyField('Tag', related_name='Spendings', blank=True)
     term = models.ForeignKey(
         'Term',
         related_name='spendings',
         on_delete=models.CASCADE
     )
-    total_to_pay = models.DecimalField(
+    amount = models.DecimalField(
         max_digits=6,
         decimal_places=2
     )
-    total_payed = models.DecimalField(
-        max_digits=6,
-        decimal_places=2,
-        default=Decimal('0.00')
-    )
+    created_at = models.DateField(default=now)
+
+    def __str__(self):
+        return self.name
 
     def add_tag(self, name):
         if not name:
             raise ValueError('Tags must have a name')
         self.tags.add(Tag.objects.get_or_create_tag(name=name))
-
-    @property
-    def left_to_pay(self):
-        return self.total_to_pay - self.total_payed
