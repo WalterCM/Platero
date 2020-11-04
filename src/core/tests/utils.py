@@ -14,5 +14,6 @@ def get_test_term():
 
 def get_test_spending(term):
     return Spending(
-        term=term
+        term=term,
+        total_to_pay=1000.0
     )

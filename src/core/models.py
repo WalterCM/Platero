@@ -1,3 +1,4 @@
+from decimal import Decimal
 
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser
@@ -62,10 +63,17 @@ class Term(models.Model):
 
     objects = TermManager()
 
-    def add_spending(self, name, tags):
+    def add_spending(self, name, total_to_pay, total_payed=0.0, tags=None):
         if not name:
             raise ValueError('Spendings must have a name')
-        spending = Spending(name=name, term=self)
+        if not total_to_pay:
+            raise ValueError('Spending must have a total to pay')
+        spending = Spending(
+            name=name,
+            term=self,
+            total_to_pay=total_to_pay,
+            total_payed=total_payed
+        )
         spending.save()
 
         if tags:
@@ -73,6 +81,26 @@ class Term(models.Model):
                 spending.add_tag(tag)
 
         return spending
+
+    @property
+    def total_to_pay(self):
+        return self.spendings.aggregate(
+            total=models.Sum('total_to_pay')
+        ).get('total')
+
+    @property
+    def total_payed(self):
+        return self.spendings.aggregate(
+            total=models.Sum('total_payed')
+        ).get('total')
+
+    @property
+    def left_to_pay(self):
+        return self.spendings.annotate(
+            left_to_pay=models.F('total_to_pay') - models.F('total_payed')
+        ).aggregate(
+            total=models.Sum('left_to_pay')
+        ).get('total')
 
 
 # Tag
@@ -114,8 +142,21 @@ class Spending(models.Model):
         related_name='spendings',
         on_delete=models.CASCADE
     )
+    total_to_pay = models.DecimalField(
+        max_digits=6,
+        decimal_places=2
+    )
+    total_payed = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
 
     def add_tag(self, name):
         if not name:
             raise ValueError('Tags must have a name')
         self.tags.add(Tag.objects.get_or_create_tag(name=name))
+
+    @property
+    def left_to_pay(self):
+        return self.total_to_pay - self.total_payed
