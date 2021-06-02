@@ -1,8 +1,14 @@
+from decimal import Decimal
+
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.auth.models import BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.utils.timezone import now
+
+from django.conf import settings
+
+from core.globals import CURRENCY
 
 
 # User
@@ -35,18 +41,34 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 
+    favorite_currency = models.CharField(
+        max_length=3,
+        choices=CURRENCY.CHOICES,
+        default=settings.DEFAULT_CURRENCY
+    )
+
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
 
-    def add_account(self, name, description, type):
+    def add_account(self, name=None, description=None,
+                    currency=None, balance=None, type=None):
         if not name:
             raise ValueError('Accounts must have a name')
+        if not currency:
+            currency = self.favorite_currency
+        if not balance:
+            balance = Decimal('0.00')
+        if not type:
+            raise ValueError('Accounts must have a type')
+
         account = Account(
             name=name,
             description=description,
-            type=type,
-            user=self
+            user=self,
+            currency=currency,
+            balance=balance,
+            type=type
         )
 
         account.save()
@@ -57,6 +79,25 @@ class User(AbstractBaseUser, PermissionsMixin):
 # Account
 class Account(models.Model):
     """Account model"""
+
+    name = models.CharField(max_length=255)
+    description = models.CharField(max_length=255)
+    user = models.ForeignKey(
+        'User',
+        related_name='accounts',
+        on_delete=models.CASCADE
+    )
+    currency = models.CharField(
+        max_length=3,
+        choices=CURRENCY.CHOICES,
+        default=settings.DEFAULT_CURRENCY
+    )
+    balance = models.DecimalField(
+        max_digits=9,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+
     class TYPE:
         CHECKING_ACCOUNT = 'checking account'
         SAVINGS = 'savings'
@@ -69,14 +110,7 @@ class Account(models.Model):
             (INVESTMENTS, 'Investments'),
             (WALLET, 'Wallet'),
         ]
-    name = models.CharField(max_length=255)
-    description = models.CharField(max_length=255)
     type = models.CharField(max_length=20, choices=TYPE.CHOICES)
-    user = models.ForeignKey(
-        'User',
-        related_name='accounts',
-        on_delete=models.CASCADE
-    )
 
 
 # Tag
