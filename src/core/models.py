@@ -39,6 +39,45 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = 'email'
 
+    def add_account(self, name, description, type):
+        if not name:
+            raise ValueError('Accounts must have a name')
+        account = Account(
+            name=name,
+            description=description,
+            type=type,
+            user=self
+        )
+
+        account.save()
+
+        return account
+
+
+# Account
+class Account(models.Model):
+    """Account model"""
+    class TYPE:
+        CHECKING_ACCOUNT = 'checking account'
+        SAVINGS = 'savings'
+        INVESTMENTS = 'investments'
+        WALLET = 'wallet'
+
+        CHOICES = [
+            (CHECKING_ACCOUNT, 'Checking Account'),
+            (SAVINGS, 'Savings'),
+            (INVESTMENTS, 'Investments'),
+            (WALLET, 'Wallet'),
+        ]
+    name = models.CharField(max_length=255)
+    description = models.CharField(max_length=255)
+    type = models.CharField(max_length=20, choices=TYPE.CHOICES)
+    user = models.ForeignKey(
+        'User',
+        related_name='accounts',
+        on_delete=models.CASCADE
+    )
+
 
 # Tag
 class TagManager(models.Manager):
@@ -174,7 +213,8 @@ class Tag(models.Model):
 # class Spending(models.Model):
 #     """Spending model"""
 #     name = models.CharField(max_length=255)
-#     tags = models.ManyToManyField('Tag', related_name='Spendings', blank=True)
+#     tags = models.ManyToManyField('Tag', related_name='Spendings', blank=True
+#     )
 #     budget = models.ForeignKey(
 #         'Budget',
 #         related_name='spendings',
