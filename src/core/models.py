@@ -148,6 +148,9 @@ class TransactionManager(models.Manager):
 
         transaction.save()
 
+        if is_paid:
+            transaction.apply()
+
         return transaction
 
     def create_transfer(self, amount=None, date=None, origin_account=None,
@@ -242,8 +245,7 @@ class Transaction(models.Model):
 
     objects = TransactionManager()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def apply(self):
         amount = self.amount
 
         if self.type == Transaction.TYPE.TRANSFER_OUTPUT or \
