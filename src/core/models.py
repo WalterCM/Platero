@@ -4,7 +4,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.auth.models import BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
-from django.utils.timezone import now
+from django.utils import timezone
 
 from django.conf import settings
 
@@ -99,10 +99,10 @@ class Account(models.Model):
     )
 
     class TYPE:
-        CHECKING_ACCOUNT = 'checking account'
-        SAVINGS = 'savings'
-        INVESTMENTS = 'investments'
-        WALLET = 'wallet'
+        CHECKING_ACCOUNT = 'C'
+        SAVINGS = 'S'
+        INVESTMENTS = 'I'
+        WALLET = 'W'
 
         CHOICES = [
             (CHECKING_ACCOUNT, 'Checking Account'),
@@ -110,7 +110,148 @@ class Account(models.Model):
             (INVESTMENTS, 'Investments'),
             (WALLET, 'Wallet'),
         ]
-    type = models.CharField(max_length=20, choices=TYPE.CHOICES)
+    type = models.CharField(max_length=1, choices=TYPE.CHOICES)
+
+    def add_transaction(self, amount=None, date=None, type=None, is_paid=None):
+        return Transaction.objects.create_transaction(
+            amount=amount,
+            date=date,
+            account=self,
+            type=type,
+            is_paid=is_paid
+        )
+
+
+# Transaction
+class TransactionManager(models.Manager):
+    """Manager of the transaction model"""
+    def create_transaction(self, amount=None, date=None, account=None,
+                           type=None, is_paid=None):
+        if not amount:
+            raise ValueError('Transaction must have an amount')
+        if not date:
+            raise ValueError('Transaction must have an date')
+        if not account:
+            raise ValueError('Transaction must have an account')
+        if not type:
+            raise ValueError('Transaction must have an type')
+        if not is_paid:
+            is_paid = False
+
+        transaction = Transaction(
+            amount=amount,
+            date=date,
+            account=account,
+            type=type,
+            is_paid=is_paid
+        )
+
+        transaction.save()
+
+        return transaction
+
+    def create_transfer(self, amount=None, date=None, origin_account=None,
+                        destination_account=None, is_paid=None):
+        """Manager function that creates transfers"""
+        transaction1 = self.create_transaction(
+            amount=amount,
+            date=date,
+            account=origin_account,
+            is_paid=is_paid,
+            type=Transaction.TYPE.TRANSFER_OUTPUT
+        )
+
+        transaction2 = self.create_transaction(
+            amount=amount,
+            date=date,
+            account=destination_account,
+            is_paid=is_paid,
+            type=Transaction.TYPE.TRANSFER_INPUT
+        )
+        transaction1.linked_transaction = transaction2
+        transaction2.linked_transaction = transaction1
+        transaction1.save()
+        transaction2.save()
+
+        return transaction1
+
+    def create_income(self, amount=None, date=None, account=None,
+                      is_paid=None):
+        """Manager function that creates incomes"""
+        transaction = self.create_transaction(
+            amount=amount,
+            date=date,
+            account=account,
+            is_paid=is_paid,
+            type=Transaction.TYPE.INCOME
+        )
+
+        return transaction
+
+    def create_expense(self, amount=None, date=None, account=None,
+                       is_paid=None):
+        """Manager function that creates expenses"""
+        transaction = self.create_transaction(
+            amount=amount,
+            date=date,
+            account=account,
+            is_paid=is_paid,
+            type=Transaction.TYPE.EXPENSE
+        )
+
+        return transaction
+
+
+class Transaction(models.Model):
+    """Transaction model"""
+    amount = models.DecimalField(
+        max_digits=9,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+
+    def get_current_date(self):
+        return timezone.localtime(timezone.now()).date()
+
+    date = models.DateField(default=get_current_date)
+    account = models.ForeignKey(
+        'Account',
+        related_name='transactions',
+        on_delete=models.CASCADE
+    )
+    linked_transaction = models.OneToOneField(
+        'self',
+        on_delete=models.CASCADE,
+        null=True
+    )
+
+    class TYPE:
+        TRANSFER_OUTPUT = 'TO'
+        TRANSFER_INPUT = 'TI'
+        INCOME = 'I'
+        EXPENSE = 'E'
+
+        CHOICES = [
+            (TRANSFER_OUTPUT, 'Transfer Input'),
+            (TRANSFER_OUTPUT, 'Transfer Output'),
+            (INCOME, 'Income'),
+            (EXPENSE, 'Expense')
+        ]
+    type = models.CharField(max_length=2, choices=TYPE.CHOICES)
+    is_paid = models.BooleanField(default=False)
+
+    objects = TransactionManager()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        amount = self.amount
+
+        if self.type == Transaction.TYPE.TRANSFER_OUTPUT or \
+                self.type == Transaction.TYPE.EXPENSE:
+            amount *= -1
+
+        self.account.balance += amount
+        self.account.save()
 
 
 # Tag

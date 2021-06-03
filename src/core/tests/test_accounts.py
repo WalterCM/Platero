@@ -3,10 +3,10 @@ from decimal import Decimal
 from django.test import TestCase
 from django.conf import settings
 
-from core.models import User
+from core.models import User, Account
 
 
-class BudgetModelTests(TestCase):
+class AccountModelTests(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user('test@test.com')
@@ -14,7 +14,7 @@ class BudgetModelTests(TestCase):
             'currency': 'PEN',
             'name': 'Cuenta de ahorros',
             'description': 'Mi primera cuenta de ahorros',
-            'type': 'savings'
+            'type': Account.TYPE.SAVINGS
         }
 
     def test_create_account(self):
@@ -50,7 +50,7 @@ class BudgetModelTests(TestCase):
         account_data = self.account_data.copy()
         del account_data['name']
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(ValueError):
             self.user.add_account(**account_data)
 
     def test_account_without_type(self):
@@ -58,5 +58,5 @@ class BudgetModelTests(TestCase):
         account_data = self.account_data.copy()
         del account_data['type']
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(ValueError):
             self.user.add_account(**account_data)

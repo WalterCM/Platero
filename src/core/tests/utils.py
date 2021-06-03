@@ -1,4 +1,8 @@
-from core.models import Tag#, Budget, Spending
+from core.models import User, Tag  # , Budget, Spending
+
+
+def get_test_user():
+    return User.objects.create_user('test@test.com')
 
 
 def get_test_tag():
