@@ -110,6 +110,60 @@ class TransactionModelTests(TransactionTests):
         self.assertEqual(transaction1.amount, transaction_data.get('amount'))
         self.assertEqual(transaction2.amount, transaction_data.get('amount'))
 
+    def test_apply_transaction(self):
+        """Tests applying an unpaid transaction"""
+        transaction_data = self.transaction_data.copy()
+        transaction_data['is_paid'] = False
+        transaction = Transaction.objects.create_transaction(
+            **transaction_data
+        )
+
+        self.assertEqual(transaction.is_paid, False)
+        self.assertEqual(self.account.balance, Decimal('1000.0'))
+
+        transaction.apply()
+
+        self.assertEqual(transaction.is_paid, True)
+        self.assertEqual(self.account.balance, Decimal('990.0'))
+
+    def test_unapply_transaction(self):
+        """Tests unapplying a paid transaction"""
+        transaction_data = self.transaction_data.copy()
+        transaction_data['is_paid'] = True
+        transaction = Transaction.objects.create_transaction(
+            **transaction_data
+        )
+
+        self.assertEqual(transaction.is_paid, True)
+        self.assertEqual(self.account.balance, Decimal('990.0'))
+
+        transaction.unapply()
+
+        self.assertEqual(transaction.is_paid, False)
+        self.assertEqual(self.account.balance, Decimal('1000.0'))
+
+    def test_apply_paid_transaction(self):
+        """Tests that a paid transaction cannot be applied"""
+        transaction_data = self.transaction_data.copy()
+        transaction_data['is_paid'] = True
+        transaction = Transaction.objects.create_transaction(
+            **transaction_data
+        )
+
+        with self.assertRaises(ValueError):
+            transaction.apply()
+
+    def test_unapply_unpaid_transaction(self):
+        """Tests that an unpaid transaction cannot be unapplied"""
+        transaction_data = self.transaction_data.copy()
+        transaction_data['is_paid'] = False
+        transaction = Transaction.objects.create_transaction(
+            **transaction_data
+        )
+
+        with self.assertRaises(ValueError):
+            transaction.unapply()
+
 
 class IncomeTests(TransactionTests):
     def test_create_new_income(self):

@@ -142,8 +142,7 @@ class TransactionManager(models.Manager):
             amount=amount,
             date=date,
             account=account,
-            type=type,
-            is_paid=is_paid
+            type=type
         )
 
         transaction.save()
@@ -246,6 +245,10 @@ class Transaction(models.Model):
     objects = TransactionManager()
 
     def apply(self):
+        """Applies the changes in balance of an unpaid transaction"""
+        if self.is_paid:
+            raise ValueError('The transasction has been applied')
+
         amount = self.amount
 
         if self.type == Transaction.TYPE.TRANSFER_OUTPUT or \
@@ -254,6 +257,24 @@ class Transaction(models.Model):
 
         self.account.balance += amount
         self.account.save()
+        self.is_paid = True
+        self.save()
+
+    def unapply(self):
+        """Undoes the changes in balance of a paid transaction"""
+        if not self.is_paid:
+            raise ValueError('The transasction has not been applied')
+
+        amount = self.amount
+
+        if self.type == Transaction.TYPE.TRANSFER_INPUT or \
+                self.type == Transaction.TYPE.INCOME:
+            amount *= -1
+
+        self.account.balance += amount
+        self.account.save()
+        self.is_paid = False
+        self.save()
 
 
 # Tag
