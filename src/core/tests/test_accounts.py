@@ -53,6 +53,15 @@ class AccountModelTests(TestCase):
         with self.assertRaises(ValueError):
             self.user.add_account(**account_data)
 
+    def test_account_without_description(self):
+        """Test creating a new account"""
+        account_data = self.account_data.copy()
+        del account_data['description']
+
+        account = self.user.add_account(**account_data)
+
+        self.assertEqual(account.description, None)
+
     def test_account_without_type(self):
         """Test creating an account without specifying a type"""
         account_data = self.account_data.copy()

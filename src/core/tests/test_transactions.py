@@ -20,6 +20,7 @@ class TransactionTests(TestCase):
         self.account = user.add_account(**self.account_data)
         self.transaction_data = {
             'amount': Decimal('10.00'),
+            'description': 'Transaccion de prueba',
             'is_paid': True,
             'date': '2021-06-02',
             'account': self.account
@@ -62,6 +63,17 @@ class TransactionModelTests(TransactionTests):
 
         with self.assertRaises(ValueError):
             Transaction.objects.create_transaction(**transaction_data)
+
+    def test_transaction_without_description(self):
+        """Test transaction creation without specifying amount"""
+        transaction_data = self.transaction_data.copy()
+        del transaction_data['description']
+
+        transaction = Transaction.objects.create_transaction(
+            **transaction_data
+        )
+
+        self.assertEqual(transaction.description, None)
 
     def test_transaction_without_is_paid(self):
         """Test transaction creation without specifying is_paid"""
@@ -165,22 +177,12 @@ class TransactionModelTests(TransactionTests):
             transaction.unapply()
 
 
-class IncomeTests(TransactionTests):
-    def test_create_new_income(self):
-        """Test creating a new transaction of type income"""
-        transaction_data = self.transaction_data.copy()
-        Transaction.objects.create_income(
-            **transaction_data
-        )
-
-        self.assertEqual(self.account.balance, Decimal('1010.0'))
-
-
 class TransferTests(TransactionTests):
     def setUp(self):
         super().setUp()
         self.account2 = self.account.user.add_account(**self.account_data)
         del self.transaction_data['account']
+        del self.transaction_data['description']
         self.transaction_data['origin_account'] = self.account
         self.transaction_data['destination_account'] = self.account2
 
@@ -196,6 +198,17 @@ class TransferTests(TransactionTests):
             self.account2.transactions.get().linked_transaction,
             transaction
         )
+
+
+class IncomeTests(TransactionTests):
+    def test_create_new_income(self):
+        """Test creating a new transaction of type income"""
+        transaction_data = self.transaction_data.copy()
+        Transaction.objects.create_income(
+            **transaction_data
+        )
+
+        self.assertEqual(self.account.balance, Decimal('1010.0'))
 
 
 class ExpenseTests(TransactionTests):

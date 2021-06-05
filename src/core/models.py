@@ -81,7 +81,7 @@ class Account(models.Model):
     """Account model"""
 
     name = models.CharField(max_length=255)
-    description = models.CharField(max_length=255)
+    description = models.CharField(max_length=255, null=True, blank=True)
     user = models.ForeignKey(
         'User',
         related_name='accounts',
@@ -112,9 +112,11 @@ class Account(models.Model):
         ]
     type = models.CharField(max_length=1, choices=TYPE.CHOICES)
 
-    def add_transaction(self, amount=None, date=None, type=None, is_paid=None):
+    def add_transaction(self, amount=None, description=None, date=None,
+                        type=None, is_paid=None):
         return Transaction.objects.create_transaction(
             amount=amount,
+            description=description,
             date=date,
             account=self,
             type=type,
@@ -125,8 +127,8 @@ class Account(models.Model):
 # Transaction
 class TransactionManager(models.Manager):
     """Manager of the transaction model"""
-    def create_transaction(self, amount=None, date=None, account=None,
-                           type=None, is_paid=None):
+    def create_transaction(self, amount=None, description=None, date=None,
+                           account=None, type=None, is_paid=False):
         if not amount:
             raise ValueError('Transaction must have an amount')
         if not date:
@@ -135,11 +137,10 @@ class TransactionManager(models.Manager):
             raise ValueError('Transaction must have an account')
         if not type:
             raise ValueError('Transaction must have an type')
-        if not is_paid:
-            is_paid = False
 
         transaction = Transaction(
             amount=amount,
+            description=description,
             date=date,
             account=account,
             type=type
@@ -157,6 +158,7 @@ class TransactionManager(models.Manager):
         """Manager function that creates transfers"""
         transaction1 = self.create_transaction(
             amount=amount,
+            description='Transfer input',
             date=date,
             account=origin_account,
             is_paid=is_paid,
@@ -165,6 +167,7 @@ class TransactionManager(models.Manager):
 
         transaction2 = self.create_transaction(
             amount=amount,
+            description='Transfer output',
             date=date,
             account=destination_account,
             is_paid=is_paid,
@@ -177,11 +180,12 @@ class TransactionManager(models.Manager):
 
         return transaction1
 
-    def create_income(self, amount=None, date=None, account=None,
-                      is_paid=None):
+    def create_income(self, amount=None, description=None, date=None,
+                      account=None, is_paid=None):
         """Manager function that creates incomes"""
         transaction = self.create_transaction(
             amount=amount,
+            description=description,
             date=date,
             account=account,
             is_paid=is_paid,
@@ -190,11 +194,12 @@ class TransactionManager(models.Manager):
 
         return transaction
 
-    def create_expense(self, amount=None, date=None, account=None,
-                       is_paid=None):
+    def create_expense(self, amount=None, description=None, date=None,
+                       account=None, is_paid=None):
         """Manager function that creates expenses"""
         transaction = self.create_transaction(
             amount=amount,
+            description=description,
             date=date,
             account=account,
             is_paid=is_paid,
@@ -211,6 +216,8 @@ class Transaction(models.Model):
         decimal_places=2,
         default=Decimal('0.00')
     )
+
+    description = models.CharField(max_length=255, blank=True, null=True)
 
     def get_current_date(self):
         return timezone.localtime(timezone.now()).date()
