@@ -9,6 +9,9 @@ class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
         fields = ('id', 'name', 'description', 'balance', 'currency', 'type')
+        extra_kwargs = {
+            'type': {'required': True}
+        }
 
     def create(self, validated_data):
         """Crea una nueva cuenta y lo retorna"""

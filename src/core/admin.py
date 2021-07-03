@@ -5,6 +5,23 @@ from django.utils.translation import gettext as _
 from core import models
 
 
+class AccountInline(admin.TabularInline):
+    model = models.Account
+    extra = 0
+    show_change_link = True
+    fieldsets = (
+        (None, {'fields': ('name', 'currency', 'type')}),
+    )
+
+
+class AccountAdmin(admin.ModelAdmin):
+    ordering = ['id']
+    list_display = ['name', 'description']
+    fieldsets = (
+        (None, {'fields': ('name', 'description', 'currency', 'balance', 'type')}),
+    )
+
+
 class UserAdmin(BaseUserAdmin):
     ordering = ['id']
     list_display = ['email', 'name']
@@ -19,6 +36,7 @@ class UserAdmin(BaseUserAdmin):
         ),
         (_('Important dates'), {'fields': ('last_login',)})
     )
+    inlines = (AccountInline,)
 
 
 # class BudgetTagInline(admin.TabularInline):
@@ -42,4 +60,5 @@ class UserAdmin(BaseUserAdmin):
 #
 admin.site.register(models.User, UserAdmin)
 # admin.site.register(models.Budget, BudgetAdmin)
+admin.site.register(models.Account, AccountAdmin)
 admin.site.register(models.Tag)

@@ -110,7 +110,14 @@ class Account(models.Model):
             (INVESTMENTS, 'Investments'),
             (WALLET, 'Wallet'),
         ]
-    type = models.CharField(max_length=1, choices=TYPE.CHOICES)
+    type = models.CharField(
+        max_length=1,
+        choices=TYPE.CHOICES,
+        default=TYPE.CHECKING_ACCOUNT
+    )
+
+    def __str__(self):
+        return self.name
 
     def add_transaction(self, amount=None, description=None, date=None,
                         type=None, is_paid=None):
