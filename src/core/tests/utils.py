@@ -20,7 +20,7 @@ def get_test_user(email=None):
 
 
 def get_test_account(user=None, name=None, description=None, currency=None, balance=None,
-                        type=None):
+                     type=None):
     if not user:
         raise TestObjectException('Account creation requires a user')
 
@@ -38,7 +38,6 @@ def get_test_account(user=None, name=None, description=None, currency=None, bala
 
 def get_test_tag():
     return Tag(name='comida')
-
 
 # def get_test_budget():
 #     return Budget(

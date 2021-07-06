@@ -1,4 +1,4 @@
-from django.core.exceptions import  PermissionDenied
+from django.core.exceptions import PermissionDenied
 
 from rest_framework import viewsets, permissions
 
