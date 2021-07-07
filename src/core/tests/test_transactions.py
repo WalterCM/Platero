@@ -44,18 +44,6 @@ class TransactionModelTests(TransactionTests):
         self.assertEqual(transaction.date, transaction_data.get('date'))
         self.assertEqual(transaction.account, transaction_data.get('account'))
 
-    def test_create_transaction_from_account(self):
-        """Tests creating a new transaction from an account"""
-        transaction_data = self.transaction_data.copy()
-        del transaction_data['account']
-        transaction = self.account.add_transaction(
-            **transaction_data
-        )
-
-        self.assertEqual(transaction.amount, transaction_data.get('amount'))
-        self.assertEqual(transaction.is_paid, transaction_data.get('is_paid'))
-        self.assertEqual(transaction.date, transaction_data.get('date'))
-
     def test_transaction_without_amount(self):
         """Test transaction creation without specifying amount"""
         transaction_data = self.transaction_data.copy()
@@ -183,7 +171,7 @@ class TransferTests(TransactionTests):
         self.account2 = self.account.user.add_account(**self.account_data)
         del self.transaction_data['account']
         del self.transaction_data['description']
-        self.transaction_data['origin_account'] = self.account
+        self.transaction_data['account'] = self.account
         self.transaction_data['destination_account'] = self.account2
 
     def test_create_new_transfer(self):

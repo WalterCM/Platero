@@ -54,7 +54,7 @@ class PrivateTests(TestCase):
         self.account = utils.get_test_account(
             user=self.user,
             currency=CURRENCY.PEN,
-            type=Account.TYPE.SAVINGS
+            _type=Account.TYPE.SAVINGS
         )
         utils.get_test_account(user=self.user)
         utils.get_test_account(user=self.user)
@@ -130,7 +130,7 @@ class PrivateTests(TestCase):
         self.assertEqual(res.data.get('name'), self.account.name)
         self.assertEqual(res.data.get('description'), self.account.description)
         self.assertEqual(res.data.get('currency'), self.account.currency)
-        self.assertEqual(res.data.get('balance'), str(self.account.balance))
+        self.assertEqual(float(res.data.get('balance')), float(self.account.balance))
         self.assertEqual(res.data.get('type'), self.account.type)
 
     def test_retrieve_account_from_another_user(self):

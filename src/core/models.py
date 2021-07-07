@@ -119,16 +119,21 @@ class Account(models.Model):
     def __str__(self):
         return self.name
 
-    def add_transaction(self, amount=None, description=None, date=None,
-                        type=None, is_paid=None):
-        return Transaction.objects.create_transaction(
-            amount=amount,
-            description=description,
-            date=date,
-            account=self,
-            type=type,
-            is_paid=is_paid
-        )
+    def add_transaction(self, type=None, **kwargs):
+        if not type:
+            raise ValueError('Transaction requires a type')
+
+        # El tipo de orden determina que funcion de modelo usara
+        if type == Transaction.CREATION_TYPE.TRANSFER:
+            f = Transaction.objects.create_transfer
+        elif type == Transaction.CREATION_TYPE.INCOME:
+            f = Transaction.objects.create_income
+        elif type == Transaction.CREATION_TYPE.EXPENSE:
+            f = Transaction.objects.create_expense
+        else:
+            raise ValueError('Incorrect type for transaction')
+
+        return f(account=self, **kwargs)
 
 
 # Transaction
@@ -160,14 +165,14 @@ class TransactionManager(models.Manager):
 
         return transaction
 
-    def create_transfer(self, amount=None, date=None, origin_account=None,
+    def create_transfer(self, amount=None, date=None, account=None,
                         destination_account=None, is_paid=None):
         """Manager function that creates transfers"""
         transaction1 = self.create_transaction(
             amount=amount,
             description='Transfer input',
             date=date,
-            account=origin_account,
+            account=account,
             is_paid=is_paid,
             type=Transaction.TYPE.TRANSFER_OUTPUT
         )
@@ -240,6 +245,13 @@ class Transaction(models.Model):
         on_delete=models.CASCADE,
         null=True
     )
+
+    class CREATION_TYPE:
+        TRANSFER = 'T'
+        INCOME = 'I'
+        EXPENSE = 'E'
+
+        CHOICES = [TRANSFER, INCOME, EXPENSE]
 
     class TYPE:
         TRANSFER_OUTPUT = 'TO'
