@@ -33,7 +33,7 @@ class TransactionModelTests(TransactionTests):
         self.transaction_data['type'] = Transaction.TYPE.EXPENSE
 
     def test_create_transaction(self):
-        """Tests creating a new transaction"""
+        """Testea creando un nuevo transaccion"""
         transaction_data = self.transaction_data.copy()
         transaction = Transaction.objects.create_transaction(
             **transaction_data
@@ -45,7 +45,7 @@ class TransactionModelTests(TransactionTests):
         self.assertEqual(transaction.account, transaction_data.get('account'))
 
     def test_transaction_without_amount(self):
-        """Test transaction creation without specifying amount"""
+        """Testea creacion de transaccion sin especificar cantidad"""
         transaction_data = self.transaction_data.copy()
         del transaction_data['amount']
 
@@ -53,7 +53,7 @@ class TransactionModelTests(TransactionTests):
             Transaction.objects.create_transaction(**transaction_data)
 
     def test_transaction_without_description(self):
-        """Test transaction creation without specifying amount"""
+        """Testea creacion de transaccion sin especificar descripccion"""
         transaction_data = self.transaction_data.copy()
         del transaction_data['description']
 
@@ -64,7 +64,7 @@ class TransactionModelTests(TransactionTests):
         self.assertEqual(transaction.description, None)
 
     def test_transaction_without_is_paid(self):
-        """Test transaction creation without specifying is_paid"""
+        """Testea creacion de transaccion sin especificar is_paid"""
         transaction_data = self.transaction_data.copy()
         del transaction_data['is_paid']
         transaction = Transaction.objects.create_transaction(
@@ -74,7 +74,7 @@ class TransactionModelTests(TransactionTests):
         self.assertEqual(transaction.is_paid, False)
 
     def test_transaction_without_date(self):
-        """Test transaction creation without specifying date"""
+        """Testea creacion de transaccion sin especificar fecha"""
         transaction_data = self.transaction_data.copy()
         del transaction_data['date']
 
@@ -82,7 +82,7 @@ class TransactionModelTests(TransactionTests):
             Transaction.objects.create_transaction(**transaction_data)
 
     def test_transaction_without_account(self):
-        """Test transaction creation without specifying account"""
+        """Testea creacion de transaccion sin especificar cuenta"""
         transaction_data = self.transaction_data.copy()
         del transaction_data['account']
 
@@ -90,7 +90,7 @@ class TransactionModelTests(TransactionTests):
             Transaction.objects.create_transaction(**transaction_data)
 
     def test_transaction_without_type(self):
-        """Test transaction creation without specifying type"""
+        """Testea de de creacion de transaccion sin especificar tipo"""
         transaction_data = self.transaction_data.copy()
         del transaction_data['type']
 
@@ -98,7 +98,7 @@ class TransactionModelTests(TransactionTests):
             Transaction.objects.create_transaction(**transaction_data)
 
     def test_create_two_transactions(self):
-        """Tests creating two transaction, one after the other"""
+        """Testea creacion de una transaccion despues de la otra"""
         transaction_data = self.transaction_data.copy()
         transaction1 = Transaction.objects.create_transaction(
             **transaction_data
@@ -111,7 +111,7 @@ class TransactionModelTests(TransactionTests):
         self.assertEqual(transaction2.amount, transaction_data.get('amount'))
 
     def test_apply_transaction(self):
-        """Tests applying an unpaid transaction"""
+        """Testea la aplicacion de una transaccion sin pagar"""
         transaction_data = self.transaction_data.copy()
         transaction_data['is_paid'] = False
         transaction = Transaction.objects.create_transaction(
@@ -127,7 +127,7 @@ class TransactionModelTests(TransactionTests):
         self.assertEqual(self.account.balance, Decimal('990.0'))
 
     def test_unapply_transaction(self):
-        """Tests unapplying a paid transaction"""
+        """Testea la desaplicacion de una transaccion pagada"""
         transaction_data = self.transaction_data.copy()
         transaction_data['is_paid'] = True
         transaction = Transaction.objects.create_transaction(
@@ -143,7 +143,7 @@ class TransactionModelTests(TransactionTests):
         self.assertEqual(self.account.balance, Decimal('1000.0'))
 
     def test_apply_paid_transaction(self):
-        """Tests that a paid transaction cannot be applied"""
+        """Testea que una transaccion pagada no pueda ser aplicada nuevamente"""
         transaction_data = self.transaction_data.copy()
         transaction_data['is_paid'] = True
         transaction = Transaction.objects.create_transaction(
@@ -154,7 +154,7 @@ class TransactionModelTests(TransactionTests):
             transaction.apply()
 
     def test_unapply_unpaid_transaction(self):
-        """Tests that an unpaid transaction cannot be unapplied"""
+        """Testea que una transaccion sin pagar pueda ser desaplicada"""
         transaction_data = self.transaction_data.copy()
         transaction_data['is_paid'] = False
         transaction = Transaction.objects.create_transaction(
@@ -175,6 +175,7 @@ class TransferTests(TransactionTests):
         self.transaction_data['destination_account'] = self.account2
 
     def test_create_new_transfer(self):
+        """Testea crear una nueva transferencia"""
         transaction_data = self.transaction_data.copy()
         transaction = Transaction.objects.create_transfer(
             **transaction_data
@@ -190,7 +191,7 @@ class TransferTests(TransactionTests):
 
 class IncomeTests(TransactionTests):
     def test_create_new_income(self):
-        """Test creating a new transaction of type income"""
+        """Testea crear una nueva ingreso"""
         transaction_data = self.transaction_data.copy()
         Transaction.objects.create_income(
             **transaction_data
@@ -201,7 +202,7 @@ class IncomeTests(TransactionTests):
 
 class ExpenseTests(TransactionTests):
     def test_create_new_expense(self):
-        """Test creating a new transaction of type Expense"""
+        """Testea crear un nuevo egreso"""
         transaction_data = self.transaction_data.copy()
         Transaction.objects.create_expense(
             **transaction_data

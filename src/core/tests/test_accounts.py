@@ -18,7 +18,7 @@ class AccountModelTests(TestCase):
         }
 
     def test_create_account(self):
-        """Test creating a new account"""
+        """Testea creando una cuenta"""
         account_data = self.account_data.copy()
         account = self.user.add_account(**account_data)
 
@@ -28,7 +28,7 @@ class AccountModelTests(TestCase):
         self.assertEqual(account.type, account_data['type'])
 
     def test_create_account_with_amount(self):
-        """Test creating a new account with a set amount"""
+        """Testea creando una cuenta con una cantidad establecida"""
         account_data = self.account_data.copy()
         account_data['balance'] = Decimal('1000.0')
 
@@ -37,7 +37,7 @@ class AccountModelTests(TestCase):
         self.assertEqual(account.balance, account_data.get('balance'))
 
     def test_create_account_without_currency(self):
-        """Test creating an account without specifying a currency"""
+        """Testea crear una cuenta sin especificar una moneda"""
         account_data = self.account_data.copy()
         del account_data['currency']
 
@@ -46,7 +46,7 @@ class AccountModelTests(TestCase):
         self.assertEqual(account.currency, settings.DEFAULT_CURRENCY)
 
     def test_account_without_name(self):
-        """Test creating an account without specifying a name"""
+        """Testea crear una cuenta sin especificar un nombre"""
         account_data = self.account_data.copy()
         del account_data['name']
 
@@ -54,7 +54,7 @@ class AccountModelTests(TestCase):
             self.user.add_account(**account_data)
 
     def test_account_without_description(self):
-        """Test creating a new account"""
+        """Testea crear una nueva cuenta sin especificar descripcion"""
         account_data = self.account_data.copy()
         del account_data['description']
 
@@ -63,7 +63,7 @@ class AccountModelTests(TestCase):
         self.assertEqual(account.description, None)
 
     def test_account_without_type(self):
-        """Test creating an account without specifying a type"""
+        """Testea crear una cuenta sin especificar un tipo"""
         account_data = self.account_data.copy()
         del account_data['type']
 
