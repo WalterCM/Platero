@@ -15,7 +15,7 @@ from core.globals import CURRENCY
 class UserManager(BaseUserManager):
 
     def create_user(self, email, password=None, **extra_fields):
-        """Creates and saves a new user"""
+        """Crea y guarda un nuevo usuario"""
         if not email:
             raise ValueError('Users must have an email address')
         user = self.model(email=self.normalize_email(email), **extra_fields)
@@ -25,7 +25,7 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password=None):
-        """Creates and saves a new superuser"""
+        """Crea y guarda y nuevo superuser"""
         user = self.create_user(email, password)
         user.is_staff = True
         user.is_superuser = True
@@ -35,7 +35,7 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    """Custom user model that supports using email instead of username"""
+    """Usuario personalizado que usa email en vez de username"""
     email = models.EmailField(max_length=255, unique=True)
     name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
@@ -50,6 +50,24 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
+
+    def add_category(self, name=None, description=None, type=None, parent=None):
+        if not name:
+            raise ValueError('Categories must have a name')
+        if not type:
+            raise ValueError('Categories must have a type')
+
+        category = Category(
+            name=name,
+            description=description,
+            user=self,
+            type=type,
+            parent=parent
+        )
+
+        category.save()
+
+        return category
 
     def add_account(self, name=None, description=None,
                     currency=None, balance=None, type=None):
@@ -76,9 +94,46 @@ class User(AbstractBaseUser, PermissionsMixin):
         return account
 
 
+# Category
+class Category(models.Model):
+    """Modelo de categoria"""
+    name = models.CharField(max_length=255)
+    description = models.CharField(max_length=255, null=True, blank=True)
+
+    user = models.ForeignKey(
+        'User',
+        related_name='categories',
+        on_delete=models.CASCADE
+    )
+    parent = models.ForeignKey(
+        'self',
+        related_name='subcategories',
+        on_delete=models.PROTECT,
+        null=True
+    )
+
+    class TYPE:
+        INCOME = 'I'
+        EXPENSE = 'E'
+
+        CHOICES = [
+            (INCOME, 'Income'),
+            (EXPENSE, 'Expense')
+        ]
+
+    type = models.CharField(max_length=1, choices=TYPE.CHOICES, default=TYPE.EXPENSE)
+
+    def get_level(self):
+        """Retorna el nivel de profundidad de la categoria"""
+        if not self.parent:
+            return 1
+
+        return self.parent.get_level() + 1
+
+
 # Account
 class Account(models.Model):
-    """Account model"""
+    """Modelo de cuenta"""
 
     name = models.CharField(max_length=255)
     description = models.CharField(max_length=255, null=True, blank=True)
@@ -138,7 +193,7 @@ class Account(models.Model):
 
 # Transaction
 class TransactionManager(models.Manager):
-    """Manager of the transaction model"""
+    """Manager del modelo de transaccion"""
     def create_transaction(self, amount=None, description=None, date=None,
                            account=None, type=None, is_paid=False):
         if not amount:
@@ -167,7 +222,7 @@ class TransactionManager(models.Manager):
 
     def create_transfer(self, amount=None, date=None, account=None,
                         destination_account=None, is_paid=None):
-        """Manager function that creates transfers"""
+        """Funcion de manager que crea transferencias"""
         transaction1 = self.create_transaction(
             amount=amount,
             description='Transfer input',
@@ -194,7 +249,7 @@ class TransactionManager(models.Manager):
 
     def create_income(self, amount=None, description=None, date=None,
                       account=None, is_paid=None):
-        """Manager function that creates incomes"""
+        """Funcion de manager que crea ingresos"""
         transaction = self.create_transaction(
             amount=amount,
             description=description,
@@ -208,7 +263,7 @@ class TransactionManager(models.Manager):
 
     def create_expense(self, amount=None, description=None, date=None,
                        account=None, is_paid=None):
-        """Manager function that creates expenses"""
+        """Funcion de manager que crea egresos"""
         transaction = self.create_transaction(
             amount=amount,
             description=description,
@@ -222,7 +277,7 @@ class TransactionManager(models.Manager):
 
 
 class Transaction(models.Model):
-    """Transaction model"""
+    """Modelo de transaccion"""
     amount = models.DecimalField(
         max_digits=9,
         decimal_places=2,
@@ -305,7 +360,7 @@ class Transaction(models.Model):
 
 # Tag
 class TagManager(models.Manager):
-    """Manager of the tag model"""
+    """Manager de etiqueta"""
     def create_tag(self, name):
         if not name:
             raise ValueError('Tags must have a name')
@@ -326,7 +381,7 @@ class TagManager(models.Manager):
 
 
 class Tag(models.Model):
-    """Tag model"""
+    """Modelo de etiquetas"""
     name = models.CharField(max_length=255)
 
     objects = TagManager()
