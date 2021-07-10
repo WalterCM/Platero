@@ -24,7 +24,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         type = self.request.data.get('type')
 
-        if type == Transaction.CREATION_TYPE.TRANSFER:
+        if type == Transaction.TYPE.TRANSFER:
             return TransferSerializer
 
         return IncomeExpenseSerializer

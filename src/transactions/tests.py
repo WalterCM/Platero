@@ -5,7 +5,7 @@ from rest_framework.test import APIClient
 from rest_framework import status
 
 from core.tests import utils
-from core.models import Account, Transaction
+from core.models import Category, Account, Transaction
 from core.globals import CURRENCY
 
 
@@ -73,19 +73,27 @@ class PrivateTests(TestCase):
         self.transfer_payload = {
             **common_payload,
             'destination_account': other_account.id,
-            'type': Transaction.CREATION_TYPE.TRANSFER
+            'type': Transaction.TYPE.TRANSFER
         }
 
         common_payload['description'] = 'descripcion test'
 
         self.income_payload = {
             **common_payload,
-            'type': Transaction.CREATION_TYPE.INCOME
+            'category': utils.get_test_category(
+                user=self.user,
+                type=Category.TYPE.INCOME
+            ).id,
+            'type': Transaction.TYPE.INCOME
         }
 
         self.expense_payload = {
             **common_payload,
-            'type': Transaction.CREATION_TYPE.EXPENSE
+            'category': utils.get_test_category(
+                user=self.user,
+                type=Category.TYPE.EXPENSE
+            ).id,
+            'type': Transaction.TYPE.EXPENSE
         }
 
     def test_list_transactions(self):

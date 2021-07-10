@@ -4,7 +4,7 @@ from django.test import TestCase
 
 from core import globals
 from core.tests import utils
-from core.models import Account, Transaction
+from core.models import Category, Account, Transaction
 
 
 class TransactionTests(TestCase):
@@ -31,6 +31,7 @@ class TransactionModelTests(TransactionTests):
     def setUp(self):
         super().setUp()
         self.transaction_data['type'] = Transaction.TYPE.EXPENSE
+        self.transaction_data['logic_type'] = Transaction.TYPE.EXPENSE
 
     def test_create_transaction(self):
         """Testea creando un nuevo transaccion"""
@@ -193,6 +194,10 @@ class IncomeTests(TransactionTests):
     def test_create_new_income(self):
         """Testea crear una nueva ingreso"""
         transaction_data = self.transaction_data.copy()
+        transaction_data['category'] = utils.get_test_category(
+            user=self.account.user,
+            type=Category.TYPE.INCOME
+        )
         Transaction.objects.create_income(
             **transaction_data
         )
@@ -204,6 +209,10 @@ class ExpenseTests(TransactionTests):
     def test_create_new_expense(self):
         """Testea crear un nuevo egreso"""
         transaction_data = self.transaction_data.copy()
+        transaction_data['category'] = utils.get_test_category(
+            user=self.account.user,
+            type=Category.TYPE.EXPENSE
+        )
         Transaction.objects.create_expense(
             **transaction_data
         )

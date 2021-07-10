@@ -179,11 +179,11 @@ class Account(models.Model):
             raise ValueError('Transaction requires a type')
 
         # El tipo de orden determina que funcion de modelo usara
-        if type == Transaction.CREATION_TYPE.TRANSFER:
+        if type == Transaction.TYPE.TRANSFER:
             f = Transaction.objects.create_transfer
-        elif type == Transaction.CREATION_TYPE.INCOME:
+        elif type == Transaction.TYPE.INCOME:
             f = Transaction.objects.create_income
-        elif type == Transaction.CREATION_TYPE.EXPENSE:
+        elif type == Transaction.TYPE.EXPENSE:
             f = Transaction.objects.create_expense
         else:
             raise ValueError('Incorrect type for transaction')
@@ -194,8 +194,8 @@ class Account(models.Model):
 # Transaction
 class TransactionManager(models.Manager):
     """Manager del modelo de transaccion"""
-    def create_transaction(self, amount=None, description=None, date=None,
-                           account=None, type=None, is_paid=False):
+    def create_transaction(self, amount=None, description=None, date=None, category=None,
+                           account=None, type=None, logic_type=None, is_paid=False):
         if not amount:
             raise ValueError('Transaction must have an amount')
         if not date:
@@ -209,8 +209,10 @@ class TransactionManager(models.Manager):
             amount=amount,
             description=description,
             date=date,
+            category=category,
             account=account,
-            type=type
+            type=type,
+            logic_type=logic_type
         )
 
         transaction.save()
@@ -220,25 +222,26 @@ class TransactionManager(models.Manager):
 
         return transaction
 
-    def create_transfer(self, amount=None, date=None, account=None,
-                        destination_account=None, is_paid=None):
+    def create_transfer(self, **kwargs):
         """Funcion de manager que crea transferencias"""
+
+        account = kwargs.pop('account')
+        destination_account = kwargs.pop('destination_account')
+
         transaction1 = self.create_transaction(
-            amount=amount,
-            description='Transfer input',
-            date=date,
+            **kwargs,
             account=account,
-            is_paid=is_paid,
-            type=Transaction.TYPE.TRANSFER_OUTPUT
+            description='Transfer output',
+            type=Transaction.TYPE.TRANSFER,
+            logic_type=Transaction.LOGIC_TYPE.EXPENSE
         )
 
         transaction2 = self.create_transaction(
-            amount=amount,
-            description='Transfer output',
-            date=date,
+            **kwargs,
             account=destination_account,
-            is_paid=is_paid,
-            type=Transaction.TYPE.TRANSFER_INPUT
+            description='Transfer input',
+            type=Transaction.TYPE.TRANSFER,
+            logic_type=Transaction.LOGIC_TYPE.INCOME
         )
         transaction1.linked_transaction = transaction2
         transaction2.linked_transaction = transaction1
@@ -247,30 +250,34 @@ class TransactionManager(models.Manager):
 
         return transaction1
 
-    def create_income(self, amount=None, description=None, date=None,
-                      account=None, is_paid=None):
+    def create_income(self, **kwargs):
         """Funcion de manager que crea ingresos"""
+        logic_type = Transaction.LOGIC_TYPE.INCOME
+        category = kwargs.get('category')
+        if not category:
+            raise ValueError('Income requires an income category')
+        if category.type != logic_type:
+            raise ValueError('Income must only have an income category')
         transaction = self.create_transaction(
-            amount=amount,
-            description=description,
-            date=date,
-            account=account,
-            is_paid=is_paid,
-            type=Transaction.TYPE.INCOME
+            **kwargs,
+            type=Transaction.TYPE.INCOME,
+            logic_type=logic_type
         )
 
         return transaction
 
-    def create_expense(self, amount=None, description=None, date=None,
-                       account=None, is_paid=None):
+    def create_expense(self, **kwargs):
         """Funcion de manager que crea egresos"""
+        logic_type = Transaction.LOGIC_TYPE.EXPENSE
+        category = kwargs.get('category')
+        if not category:
+            raise ValueError('Expense requires an expense category')
+        if category.type != logic_type:
+            raise ValueError('Expense must only have an expense category')
         transaction = self.create_transaction(
-            amount=amount,
-            description=description,
-            date=date,
-            account=account,
-            is_paid=is_paid,
-            type=Transaction.TYPE.EXPENSE
+            **kwargs,
+            type=Transaction.TYPE.EXPENSE,
+            logic_type=Transaction.LOGIC_TYPE.EXPENSE
         )
 
         return transaction
@@ -290,6 +297,12 @@ class Transaction(models.Model):
         return timezone.localtime(timezone.now()).date()
 
     date = models.DateField(default=get_current_date)
+    category = models.ForeignKey(
+        'category',
+        related_name='transactions',
+        on_delete=models.PROTECT,
+        null=True
+    )
     account = models.ForeignKey(
         'Account',
         related_name='transactions',
@@ -301,26 +314,27 @@ class Transaction(models.Model):
         null=True
     )
 
-    class CREATION_TYPE:
-        TRANSFER = 'T'
-        INCOME = 'I'
-        EXPENSE = 'E'
-
-        CHOICES = [TRANSFER, INCOME, EXPENSE]
-
-    class TYPE:
-        TRANSFER_OUTPUT = 'TO'
-        TRANSFER_INPUT = 'TI'
+    class LOGIC_TYPE:
         INCOME = 'I'
         EXPENSE = 'E'
 
         CHOICES = [
-            (TRANSFER_OUTPUT, 'Transfer Input'),
-            (TRANSFER_OUTPUT, 'Transfer Output'),
             (INCOME, 'Income'),
             (EXPENSE, 'Expense')
         ]
-    type = models.CharField(max_length=2, choices=TYPE.CHOICES)
+    logic_type = models.CharField(max_length=1, choices=LOGIC_TYPE.CHOICES)
+
+    class TYPE:
+        TRANSFER = 'T'
+        INCOME = 'I'
+        EXPENSE = 'E'
+
+        CHOICES = [
+            (TRANSFER, 'Transfer'),
+            (INCOME, 'Income'),
+            (EXPENSE, 'Expense')
+        ]
+    type = models.CharField(max_length=1, choices=TYPE.CHOICES)
     is_paid = models.BooleanField(default=False)
 
     objects = TransactionManager()
@@ -332,8 +346,7 @@ class Transaction(models.Model):
 
         amount = self.amount
 
-        if self.type == Transaction.TYPE.TRANSFER_OUTPUT or \
-                self.type == Transaction.TYPE.EXPENSE:
+        if self.logic_type == Transaction.LOGIC_TYPE.EXPENSE:
             amount *= -1
 
         self.account.balance += amount
@@ -348,8 +361,7 @@ class Transaction(models.Model):
 
         amount = self.amount
 
-        if self.type == Transaction.TYPE.TRANSFER_INPUT or \
-                self.type == Transaction.TYPE.INCOME:
+        if self.type == Transaction.LOGIC_TYPE.INCOME:
             amount *= -1
 
         self.account.balance += amount

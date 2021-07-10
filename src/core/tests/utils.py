@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 
 from core.globals import CURRENCY
-from core.models import Account, Transaction, Tag  # , Budget
+from core.models import Category, Account, Transaction, Tag  # , Budget
 
 
 class TestObjectException(Exception):
@@ -17,6 +17,18 @@ def get_test_user(email=None):
     max_letters = 10
     name = ''.join(random.choice(letters) for i in range(max_letters))
     return get_user_model().objects.create_user(email or '{}@test.com'.format(name))
+
+
+def get_test_category(user=None, name=None, type=None, parent=None):
+    if not user:
+        raise TestObjectException('Category creation requieres a user')
+    letters = string.ascii_lowercase
+    max_letters = 8
+    return user.add_category(
+        name=name or ''.join(random.choice(letters) for i in range(max_letters)),
+        type=type or random.choices(Category.TYPE.CHOICES)[0][0],
+        parent=parent
+    )
 
 
 def get_test_account(user=None, name=None, description=None, currency=None, balance=None,
@@ -42,7 +54,7 @@ def get_test_transaction(account=None, type=None, other_account=None):
         raise TestObjectException('Transaction creation requires an account')
 
     if not type:
-        type = random.choices(Transaction.CREATION_TYPE.CHOICES)[0]
+        type = random.choices(Transaction.TYPE.CHOICES)[0][0]
 
     max_amount = 10
     data = {
@@ -51,8 +63,10 @@ def get_test_transaction(account=None, type=None, other_account=None):
         'is_paid': random.choices([True, False]),
         'type': type
     }
-    if type == Transaction.CREATION_TYPE.TRANSFER:
+    if type == Transaction.TYPE.TRANSFER:
         data['destination_account'] = other_account or get_test_account(user=account.user)
+    else:
+        data['category'] = get_test_category(user=account.user, type=type)
 
     return account.add_transaction(**data)
 
