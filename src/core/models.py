@@ -93,6 +93,22 @@ class User(AbstractBaseUser, PermissionsMixin):
 
         return account
 
+    def add_budget(self, start_date=None, end_date=None):
+        if not start_date:
+            raise ValueError('Budgets must have a start date')
+        if not end_date:
+            raise ValueError('Budgets must have an end date')
+
+        budget = Budget(
+            start_date=start_date,
+            end_date=end_date,
+            user=self
+        )
+
+        budget.save()
+
+        return budget
+
 
 # Category
 class Category(models.Model):
@@ -414,113 +430,100 @@ class Tag(models.Model):
 #         budget.save()
 #
 #         return budget
-#
-#
-# class Budget(models.Model):
-#     """Budget model"""
-#
-#     start_date = models.DateField()
-#     end_date = models.DateField()
-#
-#     objects = BudgetManager()
-#
-#     def __str__(self):
-#         return '{start_date} - {end_date}'.format(
-#             start_date=self.start_date,
-#             end_date=self.end_date
-#         )
-#
-#     def add_tag(self, name, planned_spending):
-#         tag = Tag.objects.get_or_create_tag(name)
-#         tag.save()
-#
-#         budget_tag = BudgetTag(
-#             budget=self,
-#             tag=tag,
-#             planned_spending=planned_spending
-#         )
-#         budget_tag.save()
-#
-#         return budget_tag
-#
-#     def get_total_to_pay_by_tag(self, name):
-#         """Returns the planned spending of the tag"""
-#         try:
-#             tag = self.tags.get(tag__name=name)
-#         except Tag.DoesNotExist:
-#             raise ValueError(
-#                 'A tag with that name doesn\'t exist in this budget'
-#             )
-#
-#         return tag.planned_spending
-#
-#     def get_total_payed_by_tag(self, name):
-#         """Returns the total payed in spendings by tag"""
-#         return self.spendings.filter(tags__name=name).aggregate(
-#             total=models.Sum('amount')
-#         ).get('total')
-#
-#     def get_left_to_pay_by_tag(self, name):
-#         """Returns the left to pay amount by tag"""
-#         total_to_pay = self.get_total_to_pay_by_tag(name)
-#         total_payed = self.get_total_payed_by_tag(name)
-#         return total_to_pay - total_payed
-#
-#     @property
-#     def total_to_pay(self):
-#         return self.tags.aggregate(
-#             total=models.Sum('planned_spending')
-#         ).get('total')
-#
-#     @property
-#     def total_payed(self):
-#         return self.spendings.aggregate(
-#             total=models.Sum('amount')
-#         ).get('total')
-#
-#     @property
-#     def left_to_pay(self):
-#         return self.total_to_pay - self.total_payed
-#
-#
-# class BudgetTag(models.Model):
-#     budget = models.ForeignKey(
-#         'Budget',
-#         related_name='tags',
-#         on_delete=models.CASCADE
-#     )
-#     tag = models.ForeignKey(
-#         'Tag',
-#         related_name='budgets',
-#         on_delete=models.CASCADE
-#     )
-#     planned_spending = models.DecimalField(
-#         max_digits=6,
-#         decimal_places=2
-#     )
 
 
-# # Spending
-# class Spending(models.Model):
-#     """Spending model"""
-#     name = models.CharField(max_length=255)
-#     tags = models.ManyToManyField('Tag', related_name='Spendings', blank=True
-#     )
-#     budget = models.ForeignKey(
-#         'Budget',
-#         related_name='spendings',
-#         on_delete=models.CASCADE
-#     )
-#     amount = models.DecimalField(
-#         max_digits=6,
-#         decimal_places=2
-#     )
-#     created_at = models.DateField(default=now)
-#
-#     def __str__(self):
-#         return self.name
-#
-#     def add_tag(self, name):
-#         if not name:
-#             raise ValueError('Tags must have a name')
-#         self.tags.add(Tag.objects.get_or_create_tag(name=name))
+class Budget(models.Model):
+    """Budget model"""
+
+    start_date = models.DateField()
+    end_date = models.DateField()
+    user = models.ForeignKey('User', related_name='budgets', on_delete=models.CASCADE)
+
+    # objects = BudgetManager()
+
+    def __str__(self):
+        return '{start_date} - {end_date}'.format(
+            start_date=self.start_date,
+            end_date=self.end_date
+        )
+
+    def add_category(self, category=None, planned_spending=None):
+        budget_tag = BudgetCategory(
+            budget=self,
+            category=category,
+            planned_spending=planned_spending
+        )
+        budget_tag.save()
+
+        return budget_tag
+
+    def get_total_by_category(self, category=None):
+        """Returns the planned spending of the category"""
+        if not category:
+            raise ValueError('Category is required')
+
+        try:
+            category = self.categories.get(category=category)
+        except Category.DoesNotExist:
+            raise ValueError(
+                'That category doesn\'t exist in the budget'
+            )
+
+        return category.planned_spending
+
+    def get_spent_by_category(self, category=None):
+        """Returns the total payed in spendings by category"""
+        if not category:
+            raise ValueError('Category is required')
+
+        transactions = Transaction.objects.filter(
+            account__in=self.user.accounts.all(),
+            category=category,
+            type=Transaction.TYPE.EXPENSE
+        )
+        return transactions.aggregate(
+            total=models.Sum('amount')
+        ).get('total')
+
+    def get_left_by_category(self, name):
+        """Returns the left to pay amount by category"""
+        total = self.get_total_by_category(name)
+        spent = self.get_spent_by_category(name)
+        return total - spent
+
+    @property
+    def total(self):
+        return self.categories.aggregate(
+            total=models.Sum('planned_spending')
+        ).get('total')
+
+    @property
+    def spent(self):
+        transactions = Transaction.objects.filter(
+            account__in=self.user.accounts.all(),
+            type=Transaction.TYPE.EXPENSE
+        )
+        return transactions.aggregate(
+            total=models.Sum('amount')
+        ).get('total')
+
+    @property
+    def left(self):
+        return self.total - self.spent
+
+
+class BudgetCategory(models.Model):
+    budget = models.ForeignKey(
+        'Budget',
+        related_name='categories',
+        on_delete=models.CASCADE
+    )
+    category = models.ForeignKey(
+        'Category',
+        related_name='budgets',
+        on_delete=models.CASCADE
+    )
+    planned_spending = models.DecimalField(
+        max_digits=6,
+        decimal_places=2
+    )

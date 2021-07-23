@@ -1,11 +1,13 @@
 import random
 import string
 from decimal import Decimal
+from datetime import timedelta
 
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 
 from core.globals import CURRENCY
-from core.models import Category, Account, Transaction, Tag  # , Budget
+from core.models import Category, Account, Transaction, Tag
 
 
 class TestObjectException(Exception):
@@ -49,7 +51,8 @@ def get_test_account(user=None, name=None, description=None, currency=None, bala
     )
 
 
-def get_test_transaction(account=None, type=None, other_account=None):
+def get_test_transaction(account=None, type=None, other_account=None, amount=None,
+                         category=None):
     if not account:
         raise TestObjectException('Transaction creation requires an account')
 
@@ -58,15 +61,15 @@ def get_test_transaction(account=None, type=None, other_account=None):
 
     max_amount = 10
     data = {
-        'amount': Decimal(str(round(random.uniform(0.0, max_amount), 2))),
-        'date': '2021-07-06',
+        'amount': Decimal(amount or str(round(random.uniform(0.0, max_amount), 2))),
+        'date': timezone.now(),
         'is_paid': random.choices([True, False]),
         'type': type
     }
     if type == Transaction.TYPE.TRANSFER:
         data['destination_account'] = other_account or get_test_account(user=account.user)
     else:
-        data['category'] = get_test_category(user=account.user, type=type)
+        data['category'] = category or get_test_category(user=account.user, type=type)
 
     return account.add_transaction(**data)
 
@@ -86,15 +89,12 @@ def get_test_expense(account=None):
 def get_test_tag():
     return Tag(name='comida')
 
-# def get_test_budget():
-#     return Budget(
-#         start_date='2020-11-02',
-#         end_date='2020-11-30'
-#     )
-#
-#
-# def get_test_spending(budget):
-#     return Spending(
-#         budget=budget,
-#         amount=10.0
-#     )
+
+def get_test_budget(user=None):
+    if not user:
+        raise TestObjectException('Budget creation requires a user')
+    now = timezone.now()
+    return user.add_budget(
+        start_date=now,
+        end_date=now + timedelta(days=30)
+    )
