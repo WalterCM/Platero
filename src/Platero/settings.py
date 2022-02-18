@@ -28,24 +28,28 @@ SECRET_KEY = 's&pe4-93#5yd_6i=ucu&bh%bte08n!dd_5283wt^o@bje8x-59'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework_simplejwt',
+    'users',
     'core',
     'accounts',
     'transactions',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -131,3 +135,5 @@ STATIC_URL = '/static/'
 AUTH_USER_MODEL = 'core.User'
 
 DEFAULT_CURRENCY = globals.CURRENCY.PEN
+
+CORS_ORIGIN_ALLOW_ALL = True
