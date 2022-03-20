@@ -22,24 +22,26 @@ class PublicTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-    def test_create_list_url_forbidden(self):
+    def test_create_list_url_unauthorized(self):
         """Testea que necesita estar autenticado para usar el url de listado o creado"""
         res = self.client.get(LIST_CREATE_ACCOUNT_URL)
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
         res = self.client.post(LIST_CREATE_ACCOUNT_URL)
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_retrieve_update_delete_url_forbidden(self):
+    def test_retrieve_update_delete_url_unauthorized(self):
         """Testea que necesita autenticacion para usar el url de detalle"""
         res = self.client.get(get_retrieve_update_destroy_account_url())
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
         res = self.client.put(get_retrieve_update_destroy_account_url())
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
         res = self.client.delete(get_retrieve_update_destroy_account_url())
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    # TODO:  Crear tests de objetos prohibidos para el usuario
 
 
 class PrivateTests(TestCase):
