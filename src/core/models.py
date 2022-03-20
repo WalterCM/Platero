@@ -113,6 +113,7 @@ class Category(models.Model):
         return self.parent.get_level() + 1
 
 
+# Account
 class AccountLog(models.Model):
     """Modelo de log de cuenta"""
     account = models.ForeignKey('Account', related_name='logs', on_delete=models.CASCADE)
@@ -124,8 +125,14 @@ class AccountLog(models.Model):
         default=Decimal('0.00')
     )
 
+    def __str__(self):
+        return 'Account {account} {year}-{month}'.format(
+            year=self.year,
+            month=self.month,
+            account=self.account_id
+        )
 
-# Account
+
 class Account(models.Model):
     """Modelo de cuenta"""
 
@@ -184,7 +191,7 @@ class Account(models.Model):
 
         return f(account=self, **kwargs)
 
-    def get_balance(self, year, month):
+    def get_balance(self, year=None, month=None):
         if not year:
             year = timezone.now().year
         if not month:
@@ -197,6 +204,17 @@ class Account(models.Model):
             balance = self.balance
 
         return balance
+
+    def log(self, year=None, month=None, **attr):
+        if not year:
+            year = timezone.now().year
+        if not month:
+            month = timezone.now().month
+
+        import pdb; pdb.set_trace()
+        AccountLog.objects.update_or_create(
+            account=self, year=year, month=month, defaults=attr
+        )
 
 
 # Transaction
