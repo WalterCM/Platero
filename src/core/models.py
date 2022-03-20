@@ -211,7 +211,6 @@ class Account(models.Model):
         if not month:
             month = timezone.now().month
 
-        import pdb; pdb.set_trace()
         AccountLog.objects.update_or_create(
             account=self, year=year, month=month, defaults=attr
         )
