@@ -40,7 +40,8 @@ class IncomeExpenseSerializer(TransactionSerializer):
     class Meta:
         model = Transaction
         fields = (
-            'id', 'amount', 'description', 'date', 'category', 'account', 'type', 'is_paid'
+            'id', 'amount', 'description', 'date', 'category',
+            'account', 'type', 'is_paid'
         )
         extra_kwargs = {
             'amount': {'required': True},

@@ -113,6 +113,18 @@ class Category(models.Model):
         return self.parent.get_level() + 1
 
 
+class AccountLog(models.Model):
+    """Modelo de log de cuenta"""
+    account = models.ForeignKey('Account', related_name='logs', on_delete=models.CASCADE)
+    year = models.PositiveSmallIntegerField(max_length=4, default=timezone.now().year)
+    month = models.PositiveSmallIntegerField(max_length=2, default=timezone.now().month)
+    balance = models.DecimalField(
+        max_digits=9,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+
+
 # Account
 class Account(models.Model):
     """Modelo de cuenta"""
@@ -171,6 +183,20 @@ class Account(models.Model):
             raise ValueError('Incorrect type for transaction')
 
         return f(account=self, **kwargs)
+
+    def get_balance(self, year, month):
+        if not year:
+            year = timezone.now().year
+        if not month:
+            month = timezone.now().month
+
+        account_log = self.logs.filter(year=year, month=month)
+        if account_log.exists():
+            balance = account_log.get().balance
+        else:
+            balance = self.balance
+
+        return balance
 
 
 # Transaction
